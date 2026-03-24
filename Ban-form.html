@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discord Ban Manager</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #eaeaea;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 20px;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(45deg, #ff6b6b, #feca57);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            color: #a0a0a0;
+            font-size: 1.1rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            align-items: center;
+            background: rgba(255,255,255,0.05);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 250px;
+            position: relative;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 12px 20px 12px 45px;
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            background: rgba(0,0,0,0.3);
+            color: #fff;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: #ff6b6b;
+            background: rgba(0,0,0,0.5);
+        }
+
+        .search-box::before {
+            content: "🔍";
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.2rem;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a6f);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(255,107,107,0.4);
+        }
+
+        .btn-danger {
+            background: linear-gradient(45deg, #ff4757, #ff6348);
+            color: white;
+            padding: 8px 16px;
+            font-size: 0.9rem;
+        }
+
+        .btn-danger:hover {
+            transform: scale(1.05);
+        }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: rgba(255,255,255,0.05);
+            padding: 15px 25px;
+            border-radius: 10px;
+            border-left: 4px solid #ff6b6b;
+        }
+
+        .stat-card h3 {
+            font-size: 1.8rem;
+            color: #ff6b6b;
+        }
+
+        .stat-card p {
+            color: #a0a0a0;
+            font-size: 0.9rem;
+        }
+
+        .ban-list {
+            background: rgba(255,255,255,0.03);
+            border-radius: 15px;
+            overflow: hidden;
+        }
+
+        .ban-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            transition: all 0.3s;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .ban-item:hover {
+            background: rgba(255,255,255,0.05);
+            transform: translateX(5px);
+        }
+
+        .ban-info {
+            flex: 1;
+        }
+
+        .ban-name {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .ban-reason {
+            color: #a0a0a0;
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+
+        .ban-meta {
+            display: flex;
+            gap: 15px;
+            margin-top: 8px;
+            font-size: 0.85rem;
+            color: #888;
+        }
+
+        .tag {
+            background: rgba(255,107,107,0.2);
+            color: #ff6b6b;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #1e1e2e 0%, #2d2d44 100%);
+            padding: 30px;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            animation: slideUp 0.3s;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translate(-50%, -40%);
+                opacity: 0;
+            }
+            to {
+                transform: translate(-50%, -50%);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            margin-bottom: 25px;
+        }
+
+        .modal-header h2 {
+            color: #ff6b6b;
+            font-size: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #b0b0b0;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            background: rgba(0,0,0,0.3);
+            color: #fff;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #ff6b6b;
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 25px;
+        }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            flex: 1;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .btn-success {
+            background: linear-gradient(45deg, #2ed573, #7bed9f);
+            color: #1a1a2e;
+            flex: 1;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(46,213,115,0.4);
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .close-btn:hover {
+            color: #ff6b6b;
+        }
+
+        .export-section {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .btn-export {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            padding: 10px 20px;
+            font-size: 0.9rem;
+        }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #2ed573;
+            color: #1a1a2e;
+            padding: 15px 25px;
+            border-radius: 10px;
+            font-weight: 600;
+            transform: translateX(400px);
+            transition: transform 0.3s;
+            z-index: 2000;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast.error {
+            background: #ff4757;
+            color: white;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+            }
+            
+            .search-box {
+                width: 100%;
+            }
+            
+            .ban-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚫 Discord Ban Manager</h1>
+            <p>Keep track of banned users and reasons</p>
+        </header>
+
+        <div class="stats">
+            <div class="stat-card">
+                <h3 id="totalBans">0</h3>
+                <p>Total Bans</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="todayBans">0</h3>
+                <p>Added Today</p>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Search by username or reason...">
+            </div>
+            <button class="btn btn-primary" onclick="openModal()">
+                <span>➕</span> Add Ban
+            </button>
+            <button class="btn btn-export" onclick="exportData()">
+                <span>📥</span> Export
+            </button>
+        </div>
+
+        <div class="ban-list" id="banList">
+            <div class="empty-state">
+                <div class="empty-state-icon">📋</div>
+                <h3>No bans recorded yet</h3>
+                <p>Click "Add Ban" to start building your list</p>
+            </div>
+        </div>
+
+        <div class="export-section">
+            <button class="btn btn-secondary" onclick="importData()" style="margin-top: 10px;">
+                <span>📤</span> Import Data
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="modal">
+        <div class="modal">
+            <button class="close-btn" onclick="closeModal()">×</button>
+            <div class="modal-header">
+                <h2>Add New Ban</h2>
+            </div>
+            <form id="banForm" onsubmit="saveBan(event)">
+                <div class="form-group">
+                    <label>Discord Username *</label>
+                    <input type="text" id="username" placeholder="e.g., User#1234" required>
+                </div>
+                <div class="form-group">
+                    <label>User ID (optional)</label>
+                    <input type="text" id="userId" placeholder="e.g., 123456789012345678">
+                </div>
+                <div class="form-group">
+                    <label>Ban Reason *</label>
+                    <textarea id="reason" placeholder="Why was this user banned?" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Ban Type</label>
+                    <select id="banType">
+                        <option value="Permanent">Permanent</option>
+                        <option value="Temporary">Temporary</option>
+                        <option value="Warning">Warning</option>
+                    </select>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="btn btn-success">Save Ban</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // Data storage (in real app, this would connect to a backend)
+        let bans = JSON.parse(localStorage.getItem('discordBans')) || [];
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            renderBans();
+            updateStats();
+            
+            // Search functionality
+            document.getElementById('searchInput').addEventListener('input', (e) => {
+                renderBans(e.target.value);
+            });
+        });
+
+        function openModal() {
+            document.getElementById('modal').style.display = 'block';
+            document.getElementById('username').focus();
+        }
+
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+            document.getElementById('banForm').reset();
+        }
+
+        function saveBan(e) {
+            e.preventDefault();
+            
+            const ban = {
+                id: Date.now(),
+                username: document.getElementById('username').value,
+                userId: document.getElementById('userId').value,
+                reason: document.getElementById('reason').value,
+                banType: document.getElementById('banType').value,
+                date: new Date().toISOString(),
+                bannedBy: 'Moderator' // In real app, this would be the logged-in user
+            };
+
+            bans.unshift(ban);
+            localStorage.setItem('discordBans', JSON.stringify(bans));
+            
+            closeModal();
+            renderBans();
+            updateStats();
+            showToast('Ban added successfully! ✅');
+        }
+
+        function deleteBan(id) {
+            if (confirm('Are you sure you want to remove this ban record?')) {
+                bans = bans.filter(b => b.id !== id);
+                localStorage.setItem('discordBans', JSON.stringify(bans));
+                renderBans();
+                updateStats();
+                showToast('Ban removed successfully');
+            }
+        }
+
+        function renderBans(searchTerm = '') {
+            const list = document.getElementById('banList');
+            const filtered = bans.filter(ban => 
+                ban.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                ban.reason.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (ban.userId && ban.userId.includes(searchTerm))
+            );
+
+            if (filtered.length === 0) {
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">${searchTerm ? '🔍' : '📋'}</div>
+                        <h3>${searchTerm ? 'No matches found' : 'No bans recorded yet'}</h3>
+                        <p>${searchTerm ? 'Try a different search term' : 'Click "Add Ban" to start building your list'}</p>
+                    </div>
+                `;
+                return;
+            }
+
+            list.innerHTML = filtered.map(ban => `
+                <div class="ban-item">
+                    <div class="ban-info">
+                        <div class="ban-name">
+                            ${escapeHtml(ban.username)}
+                            <span class="tag">${ban.banType}</span>
+                        </div>
+                        <div class="ban-reason">${escapeHtml(ban.reason)}</div>
+                        <div class="ban-meta">
+                            <span>📅 ${formatDate(ban.date)}</span>
+                            ${ban.userId ? `<span>🆔 ${ban.userId}</span>` : ''}
+                            <span>👤 ${ban.bannedBy}</span>
+                        </div>
+                    </div>
+                    <button class="btn btn-danger" onclick="deleteBan(${ban.id})">
+                        🗑️ Delete
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function updateStats() {
+            document.getElementById('totalBans').textContent = bans.length;
+            
+            const today = new Date().toDateString();
+            const todayCount = bans.filter(b => new Date(b.date).toDateString() === today).length;
+            document.getElementById('todayBans').textContent = todayCount;
+        }
+
+        function exportData() {
+            const dataStr = JSON.stringify(bans, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `discord-bans-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            showToast('Data exported! 📥');
+        }
+
+        function importData() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const imported = JSON.parse(event.target.result);
+                        if (Array.isArray(imported)) {
+                            bans = [...bans, ...imported];
+                            localStorage.setItem('discordBans', JSON.stringify(bans));
+                            renderBans();
+                            updateStats();
+                            showToast(`Imported ${imported.length} records! 📤`);
+                        }
+                    } catch (err) {
+                        showToast('Invalid file format ❌', true);
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast show' + (isError ? ' error' : '');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('modal').addEventListener('click', (e) => {
+            if (e.target.id === 'modal') closeModal();
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeModal();
+            if (e.ctrlKey && e.key === 'k') {
+                e.preventDefault();
+                document.getElementById('searchInput').focus();
+            }
+        });
+    </script>
+</body>
+</html>
